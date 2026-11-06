@@ -85,7 +85,15 @@
     const auto dzV = genArr<nR>([&](int i) { return izV[i] - jz_S; });
 
     /* rsq = dx*dx + dy*dy + dz*dz */
+#    if GMX_SIMD_ARM_SVE && !GMX_DOUBLE
+    // The explicit fused operations allow SVE to evaluate the squared distance
+    // with two multiply-add instructions while retaining the existing sum order.
+    auto rSquaredV = genArr<nR>([&](int i) {
+        return fma(dzV[i], dzV[i], fma(dyV[i], dyV[i], dxV[i] * dxV[i]));
+    });
+#    else
     auto rSquaredV = genArr<nR>([&](int i) { return norm2(dxV[i], dyV[i], dzV[i]); });
+#    endif
 
     /* Do the cut-off check */
     auto withinCutoffV = genBoolArr<nR>([&](int i) { return rSquaredV[i] < cutoffSquared; });
