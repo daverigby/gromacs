@@ -238,6 +238,12 @@ static EwaldExclusionType pickNbnxmKernelCpuSimdExclusion(const gmx_hw_info_t gm
         return EwaldExclusionType::Table;
     }
 
+#if defined(GMX_NBNXM_ARM_NEON_TABLE_DEFAULT)
+    // Private opt-in for a measured Arm NEON build. Explicit runtime choices
+    // above retain precedence; the original analytical path remains available.
+    return EwaldExclusionType::Table;
+#endif
+
 #if GMX_SIMD                     // To avoid using undefined macros
     MSVC_DIAGNOSTIC_IGNORE(6285) // Always zero because compile time constant
     if ((GMX_SIMD_REAL_WIDTH >= 8 || (GMX_SIMD_REAL_WIDTH >= 4 && GMX_SIMD_HAVE_FMA && !GMX_DOUBLE))

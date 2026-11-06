@@ -73,6 +73,20 @@ set(NBNXM_SOURCES
     )
 list(TRANSFORM NBNXM_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
 
+option(GMX_NBNXM_ARM_NEON_TABLE_DEFAULT "Opt in to tabulated Ewald as the default Arm NEON CPU kernel" OFF)
+if (GMX_NBNXM_ARM_NEON_TABLE_DEFAULT)
+    if (NOT GMX_SIMD_ACTIVE STREQUAL "ARM_NEON_ASIMD" OR
+        NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR
+        NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
+        GMX_DOUBLE)
+        message(FATAL_ERROR "GMX_NBNXM_ARM_NEON_TABLE_DEFAULT requires AArch64 GCC, mixed precision and Arm NEON SIMD")
+    endif()
+    set_source_files_properties(
+        "${CMAKE_CURRENT_SOURCE_DIR}/nbnxm_setup.cpp"
+        DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
+        PROPERTIES COMPILE_OPTIONS "-DGMX_NBNXM_ARM_NEON_TABLE_DEFAULT=1")
+endif()
+
 if(GMX_GPU_CUDA)
     add_subdirectory(cuda)
     gmx_add_libgromacs_sources(nbnxm_gpu_data_mgmt.cpp nbnxm_gpu_buffer_ops.cpp)
