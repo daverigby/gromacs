@@ -90,6 +90,10 @@ elseif(${GMX_SIMD_ACTIVE} MATCHES "^(AVX_512)")
     endif()
 elseif(${GMX_SIMD_ACTIVE} MATCHES "^(VSX)")
     set(_fftw_simd_support_level --enable-vsx)
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" AND GMX_SIMD_ACTIVE STREQUAL "ARM_NEON_ASIMD")
+    # The managed FFTW build does not inherit GROMACS SIMD code generation.
+    # FFTW 3.3.10 has its own opt-in AArch64 NEON codelets.
+    set(_fftw_simd_support_level --enable-neon)
 endif()
 set(GMX_BUILD_OWN_FFTW_OPTIMIZATION_CONFIGURATION ${_fftw_simd_support_level} CACHE INTERNAL "Optimization flags for FFTW compilation")
 
