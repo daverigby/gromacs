@@ -187,11 +187,28 @@ public:
                                std::array<SimdReal, nR>&                 frLJV,
                                std::array<SimdReal, vljvSize>&           vLJV)
     {
+#if GMX_SIMD_ARM_NEON_ASIMD && !GMX_DOUBLE
+        // Factor the force-only LJ expression on Arm NEON. The same masked
+        // r^-6 value is used for both terms, avoiding the separate r^-12
+        // vector and one multiply per interaction lane. Energy paths retain
+        // the original expression; fused arithmetic can round differently.
+        auto rInvSixV = genArr<nR>([&](int i) {
+            return rInvSquaredV[i] * rInvSquaredV[i] * rInvSquaredV[i];
+        });
+        if constexpr (maskInteractions)
+        {
+            rInvSixV = genArr<nR>([&](int i) { return selectByMask(rInvSixV[i], interactV[i]); });
+        }
+        frLJV = genArr<nR>([&](int i) {
+            return rInvSixV[i] * fms(c12V[i], rInvSixV[i], c6V[i]);
+        });
+#else
         std::array<SimdReal, nR> rInvSixV;
         std::array<SimdReal, nR> rInvTwelveV;
         rInvSixAndRInvTwelve<nR, maskInteractions>(rInvSquaredV, interactV, rInvSixV, rInvTwelveV);
 
         frLJV = genArr<nR>([&](int i) { return fms(c12V[i], rInvTwelveV[i], c6V[i] * rInvSixV[i]); });
+#endif
 
         GMX_UNUSED_VALUE(rSquaredV);
         GMX_UNUSED_VALUE(rInvV);
